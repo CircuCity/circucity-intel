@@ -115,10 +115,10 @@ def page_research() -> None:
     st.header("Research a person or company")
     st.caption("Paste anything: LinkedIn bio, website About page, company description. The system classifies it against the full CircuCity knowledge base.")
     text = st.text_area("Source text", height=180)
-    if st.button("Classify", type="primary"):
+    if st.button("Classify with AI" if groq_config()["api_key"] else "Classify", type="primary"):
         probe = blank_lead()
         probe["evidence"] = text
-        cls = classify(probe)
+        cls = classify(probe, prefer_ai=bool(groq_config()["api_key"]))
         if cls:
             st.subheader("Result")
             if cls.weak:

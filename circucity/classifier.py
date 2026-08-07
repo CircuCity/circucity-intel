@@ -14,7 +14,9 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from .knowledge import load
+from .ai_classifier import llm_classify
+from .config import groq_config
+from .knowledge import LEAD_CLASSES, load
 
 DIMENSIONS = ["marketplace", "cira", "gavriel", "partner", "strategic", "capital"]
 
@@ -207,12 +209,42 @@ def _evidence(lead_class: str, kb: dict, corpus: str) -> tuple[list[str], list[s
     return persona_hits, facts, evidence
 
 
-def classify(lead: dict) -> Classification | None:
+def _from_llm(llm: dict, lead_class_default: str) -> Classification:
+    llm_cls = llm["lead_class"] if llm["lead_class"] in LEAD_CLASSES else lead_class_default
+    fits = {d: round(float(llm["fits"].get(d, 0)), 1) for d in DIMENSIONS}
+    facts = list(llm.get("facts") or [])
+    has_evidence = any(v > 0 for v in fits.values()) or bool(facts)
+    return Classification(
+        lead_class=llm_cls,
+        confidences=fits,
+        reason=llm.get("reason") or "AI analysis.",
+        matched_persona=[],
+        recommended_offer=llm.get("offer") or llm_cls,
+        recommended_secondary=llm.get("secondary") or "",
+        recommended_angle=llm.get("angle") or "",
+        recommended_cta=llm.get("cta") or "",
+        evidence_signals=[],
+        personalisation_facts=facts,
+        signal_count=len(facts) + (1 if has_evidence else 0),
+        weak=not has_evidence,
+    )
+
+
+def classify(lead: dict, prefer_ai: bool = False) -> Classification | None:
     corpus = lead_corpus(lead)
     if not _normalise(corpus):
         return None
 
     kb = load()
+
+    # AI-first classification for deliberate research / refine actions.
+    if prefer_ai:
+        gk = groq_config()
+        if gk["api_key"]:
+            llm = llm_classify(corpus, kb, gk["api_key"], gk["model"])
+            if llm:
+                return _from_llm(llm, "GrowthPartner")
+
     lead_class, _conf, persona_hits = detect_lead_class(corpus, kb)
 
     scores: dict[str, float] = {}

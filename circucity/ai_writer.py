@@ -48,12 +48,14 @@ def _build_user_prompt(lead: dict, classification: dict | None, signer: str) -> 
     )
 
 
-def _chat(api_key: str, model: str, user_prompt: str, timeout: int = 60) -> str:
+def chat_completion(api_key: str, model: str, system_prompt: str,
+                    user_prompt: str, timeout: int = 60,
+                    temperature: float = 0.7) -> str:
     payload = {
         "model": model,
-        "temperature": 0.7,
+        "temperature": temperature,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
     }
@@ -68,6 +70,11 @@ def _chat(api_key: str, model: str, user_prompt: str, timeout: int = 60) -> str:
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         result = json.loads(resp.read().decode("utf-8"))
     return result["choices"][0]["message"]["content"].strip()
+
+
+def _chat(api_key: str, model: str, user_prompt: str, timeout: int = 60) -> str:
+    return chat_completion(api_key, model, SYSTEM_PROMPT, user_prompt, timeout,
+                           temperature=0.7)
 
 
 def _parse(text: str) -> tuple[str, str]:

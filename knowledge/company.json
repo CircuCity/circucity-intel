@@ -1,0 +1,32 @@
+{
+  "company": {
+    "name": "CircuCity",
+    "mission": "Structured circular commerce: build the infrastructure that connects second-hand stores, sustainable brands and consumers so circular trade becomes the default, not the exception.",
+    "vision": "A global circular economy where pre-loved goods flow freely and everyone is rewarded for participating.",
+    "countries": ["Sweden", "Europe", "Global expansion"],
+    "business_model": "B2B2C marketplace for second-hand and vintage goods, monetised through seller fees and subscriptions; AI-powered commerce products (Cira, Gavriel) sold as SaaS; partner-led customer acquisition.",
+    "philosophy": "Circular commerce as infrastructure. Second-hand stores list unique stock covering-by-one-sustainability improvements, CO₂ savings and EcoTokens rewards.",
+    "stage": "Early-stage startup, actively recruiting global sales partners and strategic partnerships.",
+    "strategic_objectives": [
+      "Grow marketplace inventory and buyer base in target countries",
+      "Convert ecommerce brands to the Cira AI sales/support product",
+      "Automate listing workflows for inventory-heavy resellers via Gavriel",
+      "Build a global network of growth and sales partners",
+      "Sign strategic partnerships with circular-economy organisations and investors"
+    ]
+  },
+  "growth_objectives": {
+    "markets_targeted": ["Sweden", "Nordics", "Germany", "Europe"],
+    "countries": ["Sweden", "Germany", "Nordic countries", "European markets"],
+    "industries": ["Second-hand fashion", "Vintage retail", "Resale", "Sustainable brands", "Ecommerce", "Circular economy"],
+    "priority_products": ["Cira", "Gavriel", "CircuCity Marketplace"],
+    "current_campaigns": ["Global sales partner recruitment", "Cira customer onboarding", "Marketplace seller acquisition"],
+    "kpis": [
+      "Signed marketplace merchants",
+      "Cira subscriptions",
+      "Gavriel listings automated",
+      "Active sales partners",
+      "Strategic partnerships signed"
+    ]
+  }
+}

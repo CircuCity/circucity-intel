@@ -1,0 +1,28 @@
+{
+  "name": "Cira",
+  "problem_solved": "Ecommerce sellers lose revenue to slow support, abandoned carts and poor sales messaging. Cira lets one AI agent sell, support and recover sales so no customer is missed.",
+  "ideal_customer": "Shopify, WooCommerce and other ecommerce businesses that want AI-driven sales and customer support.",
+  "features": [
+    "AI sales assistant trained on the store's products",
+    "24/7 customer support handled by AI",
+    "Abandoned-cart recovery",
+    "Product recommendations and upsell",
+    "Checkout assistance"
+  ],
+  "integrations": ["Shopify", "WooCommerce", "Ecommerce platforms"],
+  "pricing": "Subscription-based AI sales/support product.",
+  "use_cases": ["AI customer support", "Abandoned cart recovery", "AI sales assistant", "24/7 storefront agent"],
+  "industries": ["Ecommerce", "Online retail", "Digital-first brands"],
+  "objections": [
+    "AI replies feel fake or generic",
+    "Setup is too complex",
+    "It is just another chatbot"
+  ],
+  "cta": "Book a Cira demo",
+  "signals": [
+    "shopify", "woocommerce", "ecom", "ecommerce", "e-commerce", "online store",
+    "d2c", "direct to consumer", "drop", "storefront", "abandoned cart",
+    "customer support", "live chat", "conversion rate", "carts", "checkout",
+    "email marketing", "loyalty program"
+  ]
+}

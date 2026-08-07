@@ -1,0 +1,22 @@
+{
+  "name": "Gavriel",
+  "problem_solved": "Inventory-heavy resellers lose hours manually photographing, describing and publishing each unique item. Gavriel automates the listing workflow.",
+  "ideal_customer": "Resale and second-hand businesses with large, unique, constantly changing inventory.",
+  "listing_workflow": "Photograph item → Gavriel auto-generates descriptions and listing attributes → publish across channels.",
+  "supported_platforms": ["CircuCity Marketplace", "Major marketplace platforms", "Channel publishing"],
+  "inventory_use_cases": [
+    "Hundreds of individually listed unique products",
+    "Constant new stock intake",
+    "Multi-channel publishing",
+    "Description writing at scale"
+  ],
+  "pricing": "AI listing automation subscription.",
+  "proof_demonstration": "Demonstration showing AI generating listings from a photo in seconds.",
+  "cta": "See a Gavriel demo listing",
+  "signals": [
+    "inventory", "stock", "listings", "listing", "product descriptions",
+    "catalog", "catalogue", "sku", "skus", "unique items", "batch",
+    "multi", "marketplace sellers", "item intake", "product photos",
+    "categorisation", "categorization"
+  ]
+}

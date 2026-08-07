@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+st_out.log
+st_err.log
+data/leads.json
+.venv/
+env/

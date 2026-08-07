@@ -1,0 +1,22 @@
+{
+  "name": "CircuCity Marketplace",
+  "buyer_proposition": "Shop unique, pre-loved and vintage items with confidence; earn EcoTokens rewards for circular purchases; track the CO2 saved.",
+  "seller_proposition": "A dedicated channel for second-hand stores and sustainable brands to reach buyers of circular goods, with AI-assisted listing and rewards for participation.",
+  "categories": ["Vintage fashion", "Second-hand clothing", "Preloved", "Pre-owned", "Retro", "Designer resale", "Swaps"],
+  "seller_requirements": ["Second-hand store", "Vintage shop", "Sustainable brand", "Resale business"],
+  "fees": "Seller participation modelled on fair marketplace fees; details in partnership docs.",
+  "co2_proposition": "Every circular purchase avoids the CO2 impact of new production; shoppers can see the CO2 saved.",
+  "ecoTokens": "Reward points earned by buying, selling and swapping sustainably on the platform.",
+  "models": {
+    "buy": "Buy unique pre-loved items from verified circular sellers.",
+    "sell": "Sellers list inventory with AI help and reach circular buyers.",
+    "swap": "Swap items to keep goods circulating."
+  },
+  "cta": "List your store on the CircuCity Marketplace",
+  "signals": [
+    "second-hand", "second hand", "vintage", "thrift", "preloved", "pre-loved",
+    "pre-owned", "preowned", "resale", "reseller", "consignment", "charity shop",
+    "recommerce", "used clothing", "retro fashion", "premium resale", "circular commerce",
+    "circular marketplace", "swap"
+  ]
+}

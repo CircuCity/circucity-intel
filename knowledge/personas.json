@@ -1,0 +1,47 @@
+{
+  "personas": {
+    "Seller": {
+      "keywords": ["second-hand", "second hand", "vintage", "thrift", "resale store",
+        "resale business", "consignment shop", "charity shop", "reuse", "preloved",
+        "pre-loved", "pre-owned", "sustainable brand", "swap shop", "secondhand",
+        "vinted seller", "depop seller", "vestiaire", "boutique", "retail store"],
+      "description": "Second-hand or sustainable retailer who could sell on the marketplace"
+    },
+    "CiraCustomer": {
+      "keywords": ["shopify merchant", "shopify brand", "woocommerce", "ecommerce brand",
+        "ecommerce business", "online retailer", "online store", "d2c", "digital brand",
+        "checkout", "abandoned cart", "b2c", "retailer", "email marketing"],
+      "description": "Online business that could subscribe to Cira"
+    },
+    "GavrielCustomer": {
+      "keywords": ["inventory-heavy", "reseller", "stock", "listings", "product catalog",
+        "catalogue", "bulk listings", "multi-channel", "unique items", "sku"],
+      "description": "Inventory-heavy resale business for Gavriel automation"
+    },
+    "GrowthPartner": {
+      "keywords": ["sales consultant", "growth consultant", "business development",
+        "b2b sales", "saas sales", "sales agent", "agency", "freelance marketer",
+        "digital marketer", "sales rep", "go to market", "gtm", "affiliate marketer",
+        "performance marketer", "growth marketer", "crm consultant"],
+      "description": "Intermediary who can sell CircuCity to their network"
+    },
+    "StrategicPartner": {
+      "keywords": ["circular economy network", "sustainability organisation", "municipality",
+        "city council", "government", "accelerator", "incubator", "university", "college",
+        "student org", "foundation", "ngo", "non-profit", "association", "community network"],
+      "description": "Organisation with distribution or circular-economy credibility"
+    },
+    "CapitalPartner": {
+      "keywords": ["impact investor", "green fund", "venture capital", "vc", "impact fund",
+        "esg", "climate finance", "angel investor", "grant programme", "tech fund"],
+      "description": "Investor, fund or grant programme"
+    },
+    "BuyerPartner": {
+      "keywords": ["creator", "influencer", "newsletter", "blog", "blogger",
+        "content creator", "community", "student organisation", "student union",
+        "podcast", "youtube", "instagram", "tiktok", "loyalty partner",
+        "comparison site", "media", "editor"],
+      "description": "Person or media that already aggregates the buyer audience"
+    }
+  }
+}

@@ -16,7 +16,9 @@ Then open http://localhost:8501.
 ## Pages
 
 - **Dashboard** — pipeline metrics, status & lead-type breakdown
-- **Research & Classify** — paste a LinkedIn bio / About page / company text; the system detects lead type, scores fit across all six dimensions, recommends an offer, angle, CTA and personalisation facts
+- **Research & Classify** — paste a LinkedIn bio / About page / company text; the system detects lead type, scores fit across all six dimensions, recommends an offer, angle, CTA and personalisation facts (AI-first when Groq is configured)
+- **Find leads** — web search for candidates, fetch their sites, AI-classify and bulk-import as leads
+- **Import CSV** — upload leads (template provided, any column subset), edit rows in the grid, optionally AI-classify each one, then import
 - **Leads** — view, edit, classify, write and **send** a personalised email, log email history, manage outreach status and next action
 - **Add lead** — manual entry
 - **Knowledge base** — live-edit the CircuCity brain (JSON, validated). Scoring uses these files, so changing pricing/offers/targets immediately changes recommendations

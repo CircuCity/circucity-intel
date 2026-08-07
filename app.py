@@ -13,6 +13,7 @@ import streamlit as st
 from circucity.classifier import DIMENSION_LABELS, classify
 from circucity.config import groq_config, render_config_sidebar, smtp_config
 from circucity.emails import compose_email
+from circucity.importer import import_and_classify, parse_csv, rows_to_leads, template_csv
 from circucity.knowledge import load, save_section, section_names
 from circucity.leads import (
     OUTREACH_STATUSES,
@@ -25,6 +26,7 @@ from circucity.leads import (
     update_lead,
 )
 from circucity.mailer import send_email
+from circucity.webfind import fetch_text, search_web
 
 st.set_page_config(page_title="CircuCity Growth Intel", page_icon="recycle", layout="wide")
 
@@ -317,9 +319,109 @@ def page_knowledge() -> None:
     )
 
 
+def page_find() -> None:
+    st.header("Find leads on the web")
+    st.caption("Search for candidates, fetch their sites, classify with the AI and import as leads.")
+    c1, c2 = st.columns([3, 1])
+    query = c1.text_input("Search query",
+                          placeholder='e.g. "second-hand clothing store Berlin"')
+    n_results = c2.slider("Results", 5, 25, 10)
+    if st.button("Search the web", type="primary"):
+        with st.spinner("Searching..."):
+            st.session_state["find_results"] = search_web(query, n_results)
+        st.rerun()
+
+    results = st.session_state.get("find_results")
+    if results:
+        if len(results) == 1 and not results[0]["url"]:
+            st.warning(results[0]["snippet"] or "Search returned nothing.")
+            return
+        df = pd.DataFrame(results).assign(add=False)
+        edited = st.data_editor(
+            df,
+            column_config={
+                "add": st.column_config.CheckboxColumn("Import"),
+                "title": st.column_config.TextColumn("Title", width="large"),
+                "url": st.column_config.TextColumn("URL"),
+                "snippet": st.column_config.TextColumn("Snippet", width="large"),
+            },
+            hide_index=True, width="stretch", key="find_editor",
+            disabled=["title", "url", "snippet"],
+        )
+        selected = edited[edited["add"]]
+        if len(selected):
+            st.markdown(f"**{len(selected)} selected**")
+            ai_on = bool(groq_config()["api_key"])
+            if st.button(f"Fetch, classify & import {len(selected)} (+AI analysis)" if ai_on
+                         else f"Fetch, classify & import {len(selected)}", type="primary"):
+                imported, failed = 0, []
+                for _, row in selected.iterrows():
+                    try:
+                        text = fetch_text(row["url"])
+                    except Exception:
+                        text = ""
+                    lead = blank_lead()
+                    lead.update({
+                        "organisation": _domain(row["url"]),
+                        "website": row["url"],
+                        "source": "Web search",
+                        "evidence": text or str(row["snippet"]),
+                        "notes": str(row["title"])[:200],
+                    })
+                    cls = classify(lead, prefer_ai=ai_on)
+                    if cls:
+                        lead["lead_class"] = cls.lead_class
+                    add_lead(lead)
+                    imported += 1
+                st.success(f"Imported {imported} lead(s). Open the Leads page.")
+                st.rerun()
+
+
+def _domain(url: str) -> str:
+    from urllib.parse import urlparse
+    net = urlparse(url if "://" in url else "https://" + url).netloc
+    return net.removeprefix("www.") or url
+
+
+def page_import() -> None:
+    st.header("Import leads from CSV")
+    st.caption("Upload a CSV with contact, organisation, country, website, email, role, "
+               "industry, business_model, evidence, source. Any subset works - edit rows "
+               "before importing, and optionally AI-classify each one.")
+    st.download_button("Download CSV template", template_csv(),
+                       file_name="circucity_leads_template.csv", mime="text/csv")
+
+    up = st.file_uploader("CSV file", type=["csv"])
+    if up:
+        try:
+            leads, warnings = parse_csv(up)
+        except Exception as e:
+            st.error(f"Could not read CSV: {e}")
+            return
+        for w in warnings:
+            st.warning(w)
+        if leads:
+            preview = pd.DataFrame([
+                {k: lead[k] for k in ("contact", "organisation", "country", "website",
+                                      "email", "role", "industry", "evidence", "source")
+                 if lead[k]}
+                for lead in leads
+            ])
+            edited = st.data_editor(preview, num_rows="dynamic", width="stretch",
+                                    key="csv_editor")
+            ai_on = st.checkbox("AI-classify each row (one Groq call per lead)")
+            if st.button(f"Import {len(edited)} leads", type="primary"):
+                final = rows_to_leads(edited)
+                saved = import_and_classify(final, ai_on and bool(groq_config()["api_key"]))
+                st.success(f"Imported and saved {len(saved)} lead(s).")
+                st.rerun()
+
+
 PAGES = {
     "Dashboard": page_dashboard,
     "Research & Classify": page_research,
+    "Find leads": page_find,
+    "Import CSV": page_import,
     "Leads": page_leads,
     "Add lead": page_add,
     "Knowledge base": page_knowledge,

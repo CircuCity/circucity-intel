@@ -54,6 +54,8 @@ class Classification:
     recommended_cta: str
     evidence_signals: list[str]
     personalisation_facts: list[str]
+    signal_count: int = 0
+    weak: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -98,7 +100,7 @@ def lead_corpus(lead: dict) -> str:
 def detect_lead_class(corpus: str, kb: dict) -> tuple[str, float, list[str]]:
     personas = (kb.get("personas") or {}).get("personas") or {}
     norm = _normalise(corpus)
-    best, best_score, best_hits = "GrowthPartner", -1.0, []
+    best, best_score, best_hits = "GrowthPartner", 0.0, []
     for cls, spec in personas.items():
         keywords = list((spec or {}).get("keywords") or [])
         hits = [k for k in keywords if k.lower() in norm]
@@ -237,6 +239,12 @@ def classify(lead: dict) -> Classification | None:
     best_offer, secondary, angle, cta = _recommend(lead_class, scores, kb)
     persona_hits, facts, evidence = _evidence(lead_class, kb, corpus)
 
+    total_signals = len(persona_hits)
+    for dim in DIMENSIONS:
+        n, _ = _count_signals(corpus, _dimension_signals(kb, dim))
+        total_signals += n
+    weak = total_signals == 0
+
     return Classification(
         lead_class=lead_class,
         confidences=scores,
@@ -248,4 +256,6 @@ def classify(lead: dict) -> Classification | None:
         recommended_cta=cta,
         evidence_signals=evidence,
         personalisation_facts=facts,
+        signal_count=total_signals,
+        weak=weak,
     )

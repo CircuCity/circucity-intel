@@ -121,6 +121,12 @@ def page_research() -> None:
         cls = classify(probe)
         if cls:
             st.subheader("Result")
+            if cls.weak:
+                st.warning(
+                    f"Only {cls.signal_count} signal(s) found - this looks like label text or an empty field, "
+                    "not a researched profile. Classification will be unreliable. "
+                    "Paste more context (role, industry, what they sell, who they help)."
+                )
             st.markdown(f"**Lead type: {cls.lead_class}**  - recommended offer: *{cls.recommended_offer}*")
             render_scorebars(cls.confidences)
             st.markdown(f"**Angle:** {cls.recommended_angle}")
@@ -182,6 +188,8 @@ def page_leads() -> None:
             lead = update_lead(lead["id"], {"next_action": nxt})
 
     if cls:
+        if cls.weak:
+            st.warning("Weak evidence: no CircuCity signals matched. Add role/industry/what-they-sell text for a reliable classification.")
         st.markdown(f"**Recommended offer:** {cls.recommended_offer}  -  **CTA:** {cls.recommended_cta}")
         render_scorebars(cls.confidences)
         st.markdown(f"**Angle:** {cls.recommended_angle}")

@@ -102,3 +102,48 @@ def generate_ai_email(lead: dict, classification: dict | None,
         return subject, body
     except Exception:
         return None, None
+
+
+FIT_SYSTEM_PROMPT = (
+    "You explain commercial fit concisely for CircuCity, a circular-commerce "
+    "platform: a marketplace for second-hand stores and consumers, AI products "
+    "Cira (AI sales & support for ecommerce) and Gavriel (AI listing automation), "
+    "and a partner program with commissions. Write one short paragraph (max 90 "
+    "words) grounded ONLY in the signal facts provided - never invent details "
+    "about the lead. End with one concrete next step the business could take."
+)
+
+
+def _build_fit_prompt(lead: dict, classification: dict | None) -> str:
+    if classification is None:
+        cls = {}
+    elif hasattr(classification, "to_dict"):
+        cls = classification.to_dict()
+    else:
+        cls = dict(classification)
+    facts = "\n".join(f"- {f}" for f in (cls.get("personalisation_facts") or []))
+    return "\n".join([
+        f"ORGANISATION: {lead.get('organisation', '')}",
+        f"INDUSTRY: {lead.get('industry', '')}",
+        f"DESCRIPTION: {lead.get('description', '') or lead.get('custom', {}).get('snippet', '')}",
+        f"LEAD TYPE: {cls.get('lead_class', '')}",
+        f"FIT SCORE: {cls.get('fit_score', '')}",
+        f"RECOMMENDED OFFER: {cls.get('recommended_offer', '')}",
+        f"RECOMMENDED SECONDARY: {cls.get('recommended_secondary', '')}",
+        f"EVIDENCE:\n{facts}",
+        "\nWrite: 'How CircuCity fits <organisation> - <one paragraph, grounded in evidence>. Then one line: 'Suggested next step - <concrete>.'",
+    ])
+
+
+def explain_fit(lead: dict, classification: dict | None,
+                api_key: str, model: str) -> str | None:
+    """Natural-language 'why this lead fits CircuCity' summary, or None."""
+    if not api_key:
+        return None
+    try:
+        text = chat_completion(api_key, model, FIT_SYSTEM_PROMPT,
+                              _build_fit_prompt(lead, classification or {}),
+                              temperature=0.4)
+        return text.strip()
+    except Exception:
+        return None

@@ -10,8 +10,10 @@ import json
 import pandas as pd
 import streamlit as st
 
+from circucity.ai_writer import explain_fit
 from circucity.classifier import DIMENSION_LABELS, classify
 from circucity.config import groq_config, render_config_sidebar, smtp_config
+from circucity.emailfind import discover
 from circucity.emails import compose_email
 from circucity.importer import import_and_classify, parse_csv, rows_to_leads, template_csv
 from circucity.knowledge import load, save_section, section_names
@@ -176,6 +178,8 @@ def page_leads() -> None:
     if lead["evidence"] or lead["notes"] or lead.get("industry"):
         cls = classify(lead)
 
+    gcfg = groq_config()
+
     st.subheader(f"{lead['contact'] or 'Unnamed'} - {lead['organisation'] or ''}")
 
     c1, c2 = st.columns(2)
@@ -196,7 +200,20 @@ def page_leads() -> None:
         render_scorebars(cls.confidences)
         st.markdown(f"**Angle:** {cls.recommended_angle}")
         st.markdown(f"**Why:** {cls.reason}")
-        with st.expander("Show classification detail"):
+        fit_key = f"fit_{lead['id']}"
+        st.markdown("**How CircuCity fits**")
+        need_col, fit_col = st.columns([1, 4])
+        with need_col:
+            if st.button("Explain fit with AI", key=f"fit_btn_{lead['id']}"):
+                with st.spinner(f"Analyzing with {gcfg.get('model', '')} ..."):
+                    st.session_state[fit_key] = explain_fit(lead, cls, gcfg.get("api_key", ""), gcfg.get("model", ""))
+        with fit_col:
+            stored_fit = st.session_state.get(fit_key)
+            if stored_fit:
+                st.markdown(stored_fit)
+            else:
+                st.caption("AI writes how CircuCity's marketplace, Cira and Gavriel fit this exact business - grounded in the evidence below.")
+        with st.expander("Evidence behind the fit"):
             for f in cls.personalisation_facts:
                 st.write("-", f)
             for e in cls.evidence_signals:
@@ -205,13 +222,19 @@ def page_leads() -> None:
         st.info("Add role/industry/evidence text below, save, and classification will run.")
 
     st.subheader("Email")
+    email_status = lead.get("custom", {}).get("email_status")
+    if email_status:
+        st.caption(f"Email: {email_status}"
+                   + (" - verified on the lead's own site" if email_status == "found_website"
+                      else " - mailbox accepted RCPT" if email_status == "smtp_ok"
+                      else " - domain has MX" if email_status == "mx_ok"
+                      else ""))
     c_mode, c_signer = st.columns([1, 3])
     with c_mode:
         mode = st.radio("Writer", ["Template", "AI (Groq)"], horizontal=True, key="writer_mode")
     with c_signer:
         signer = st.text_input("Signer name", "The CircuCity team", key="signer_name")
 
-    gcfg = groq_config()
     draft_key = f"draft_{lead['id']}"
 
     use_ai = mode == "AI (Groq)"
@@ -352,9 +375,13 @@ def page_find() -> None:
         if len(selected):
             st.markdown(f"**{len(selected)} selected**")
             ai_on = bool(groq_config()["api_key"])
-            if st.button(f"Fetch, classify & import {len(selected)} (+AI analysis)" if ai_on
-                         else f"Fetch, classify & import {len(selected)}", type="primary"):
-                imported, failed = 0, []
+            c_find, c_probe, c_go = st.columns([1, 2, 3])
+            find_email = c_find.checkbox("Find business email", value=True)
+            probe_smtp = c_probe.checkbox("Verify deliverability (SMTP)", value=False)
+            if c_go.button(
+                    f"Fetch, classify & import {len(selected)} (+AI analysis)" if ai_on
+                    else f"Fetch, classify & import {len(selected)}", type="primary"):
+                imported, failed, with_email = 0, [], 0
                 for _, row in selected.iterrows():
                     try:
                         text = fetch_text(row["url"])
@@ -368,12 +395,21 @@ def page_find() -> None:
                         "evidence": text or str(row["snippet"]),
                         "notes": str(row["title"])[:200],
                     })
+                    if find_email:
+                        found_info = discover(text, row["url"], probe_smtp=probe_smtp)
+                        if found_info.get("email"):
+                            lead["email"] = found_info["email"]
+                            lead["custom"]["email_candidates"] = found_info.get("candidates", [])
+                            lead["custom"]["email_status"] = found_info["status"]
+                            with_email += 1
                     cls = classify(lead, prefer_ai=ai_on)
                     if cls:
                         lead["lead_class"] = cls.lead_class
                     add_lead(lead)
                     imported += 1
-                st.success(f"Imported {imported} lead(s). Open the Leads page.")
+                st.success(
+                    f"Imported {imported} lead(s) - {with_email} with a business email. "
+                    "Open the Leads page.")
                 st.rerun()
 
 

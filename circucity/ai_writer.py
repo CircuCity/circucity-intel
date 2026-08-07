@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import re
+import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -26,7 +28,12 @@ SYSTEM_PROMPT = (
 
 
 def _build_user_prompt(lead: dict, classification: dict | None, signer: str) -> str:
-    cls = classification or {}
+    if classification is None:
+        cls = {}
+    elif hasattr(classification, "to_dict"):
+        cls = classification.to_dict()
+    else:
+        cls = dict(classification)
     facts = "\n".join(f"- {f}" for f in (cls.get("personalisation_facts") or []))
     parts = [
         f"CONTACT: {lead.get('contact', '')}",
@@ -67,9 +74,27 @@ def chat_completion(api_key: str, model: str, system_prompt: str,
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        result = json.loads(resp.read().decode("utf-8"))
-    return result["choices"][0]["message"]["content"].strip()
+    last_exc = None
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+            return result["choices"][0]["message"]["content"].strip()
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            if exc.code == 429 and attempt == 0:
+                time.sleep(4)
+                continue
+            body = exc.read().decode("utf-8", "replace")
+            print(f"Groq HTTP {exc.code}: {body[:300]}", file=sys.stderr)
+            raise
+        except Exception as exc:
+            last_exc = exc
+            if attempt == 0:
+                time.sleep(2)
+                continue
+            raise
+    raise last_exc
 
 
 def _chat(api_key: str, model: str, user_prompt: str, timeout: int = 60) -> str:
@@ -92,7 +117,10 @@ def _parse(text: str) -> tuple[str, str]:
 
 def generate_ai_email(lead: dict, classification: dict | None,
                       api_key: str, model: str, signer: str) -> tuple[str, str]:
-    """Return (subject, body) or (None, None) on any failure."""
+    """Return (subject, body) or (None, None) on failure.
+
+    The caller (emails.compose_email) falls back to the template writer.
+    """
     if not api_key:
         return None, None
     try:

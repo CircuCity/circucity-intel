@@ -17,9 +17,34 @@ Then open http://localhost:8501.
 
 - **Dashboard** — pipeline metrics, status & lead-type breakdown
 - **Research & Classify** — paste a LinkedIn bio / About page / company text; the system detects lead type, scores fit across all six dimensions, recommends an offer, angle, CTA and personalisation facts
-- **Leads** — view, edit, classify, generate a personalised email, log emails, manage outreach status and next action
+- **Leads** — view, edit, classify, write and **send** a personalised email, log email history, manage outreach status and next action
 - **Add lead** — manual entry
 - **Knowledge base** — live-edit the CircuCity brain (JSON, validated). Scoring uses these files, so changing pricing/offers/targets immediately changes recommendations
+
+## Sending email + AI writing
+
+Two optional connections, configured in secrets — never in code:
+
+1. **AI writer (Groq)** — picks the best template strategy from the classification, then writes a genuinely personalised email with the LLM. Falls back to deterministic templates if the key is missing or a call fails.
+2. **SMTP** — the "Send email" button delivers the draft via your mail server and logs a copy to the lead's history.
+
+Local secrets file `.streamlit/secrets.toml` (gitignored — copy it from this template):
+
+```toml
+[groq]
+api_key = "gsk_..."        # https://console.groq.com
+model = "llama-3.3-70b-versatile"
+
+[smtp]
+host = "smtp.gmail.com"    # your provider (Gmail app password, Mailgun, Brevo, ...)
+port = 587
+user = "you@example.com"
+password = "app-password"
+from_addr = "you@example.com"
+from_name = "CircuCity"
+```
+
+**Streamlit Community Cloud**: add the same keys under the app's Settings → Secrets, with `GROQ_API_KEY` / `GROQ_MODEL` or the `groq.*` / `smtp.*` block. The sidebar shows live connection status for both.
 
 ## Architecture
 
@@ -29,9 +54,13 @@ circucity/
   knowledge.py         Knowledge loader/saver + section registry
   leads.py             Lead model + JSON persistence (data/leads.json)
   classifier.py        Lead-type detection, six-dimension fit scoring, offer/angle/CTA
-  emails.py            Per-lead-class personalised email templates
+  emails.py            Per-lead-class personalised email templates + compose()
+  ai_writer.py         Optional Groq LLM writer (works in template mode without it)
+  mailer.py            SMTP sending via stdlib smtplib
+  config.py            Secrets access + sidebar connection status
 knowledge/*.json       Editable CircuCity Knowledge Base + persona definitions
 data/leads.json        Persisted leads (created on first save)
+.streamlit/secrets.toml  Local API keys / SMTP (gitignored)
 ```
 
 **Lead Type ≠ Offer.** A growth marketer is a `GrowthPartner` and its offer is `Cira partnership`; a second-hand store is a `Seller` and gets `Marketplace + Gavriel`; a sustainability network is a `StrategicPartner` with no product pitched. The classifier keeps these separate.

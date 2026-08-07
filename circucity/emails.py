@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from .ai_writer import generate_ai_email
 from .knowledge import load
 
 TEMPLATES = {
@@ -164,8 +165,18 @@ def _fill(template: str, lead: dict, classification: dict | None, signer: str) -
     return out
 
 
+def _as_dict(classification) -> dict | None:
+    """Accept either a Classification object or a dict, return a dict."""
+    if classification is None:
+        return None
+    if hasattr(classification, "to_dict"):
+        return classification.to_dict()
+    return dict(classification)
+
+
 def generate_email(lead: dict, classification: dict | None, signer: str = "The CircuCity team") -> tuple[str, str]:
     """Return (subject, body). Falls back to the most fitting template."""
+    classification = _as_dict(classification)
     cls = classification.get("lead_class") if classification else ""
     template = TEMPLATES.get(cls)
     if not template:
@@ -179,3 +190,21 @@ def generate_email(lead: dict, classification: dict | None, signer: str = "The C
 def subject_line(lead: dict, classification: dict | None, signer: str = "The CircuCity team") -> str:
     subject, _ = generate_email(lead, classification, signer)
     return subject
+
+
+def compose_email(lead: dict, classification: dict | None, signer: str = "The CircuCity team",
+                  use_ai: bool = False, ai_kwargs: dict | None = None) -> tuple[str, str, str]:
+    """Compose an email, preferring AI when enabled+configured.
+
+    Returns (subject, body, method) where method is 'ai' or 'template'.
+    Falls back to the template on any AI failure.
+    """
+    cls_dict = _as_dict(classification)
+    if use_ai:
+        ai_kwargs = ai_kwargs or {}
+        subject, body = generate_ai_email(lead, cls_dict, ai_kwargs.get("api_key"),
+                                          ai_kwargs.get("model"), signer)
+        if subject and body:
+            return subject, body, "ai"
+    subject, body = generate_email(lead, cls_dict, signer)
+    return subject, body, "template"

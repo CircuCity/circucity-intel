@@ -11,7 +11,8 @@ import pandas as pd
 import streamlit as st
 
 from circucity.classifier import DIMENSION_LABELS, classify
-from circucity.emails import generate_email
+from circucity.config import groq_config, render_config_sidebar, smtp_config
+from circucity.emails import compose_email
 from circucity.knowledge import load, save_section, section_names
 from circucity.leads import (
     OUTREACH_STATUSES,
@@ -23,6 +24,7 @@ from circucity.leads import (
     load_leads,
     update_lead,
 )
+from circucity.mailer import send_email
 
 st.set_page_config(page_title="CircuCity Growth Intel", page_icon="recycle", layout="wide")
 
@@ -60,7 +62,7 @@ def page_dashboard() -> None:
             for l in leads
         ])
         st.subheader("Pipeline")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     with col2:
         st.subheader("By status")
         status_df = pd.DataFrame(
@@ -193,18 +195,56 @@ def page_leads() -> None:
         st.info("Add role/industry/evidence text below, save, and classification will run.")
 
     st.subheader("Email")
-    signer = st.text_input("Signer name", "The CircuCity team")
-    subj, body = generate_email(lead, cls.to_dict() if cls else None, signer)
-    subject = st.text_input("Subject", subj)
-    body_box = st.text_area("Email body", body, height=260)
-    col_a, col_b = st.columns([1, 4])
+    c_mode, c_signer = st.columns([1, 3])
+    with c_mode:
+        mode = st.radio("Writer", ["Template", "AI (Groq)"], horizontal=True, key="writer_mode")
+    with c_signer:
+        signer = st.text_input("Signer name", "The CircuCity team", key="signer_name")
+
+    gcfg = groq_config()
+    draft_key = f"draft_{lead['id']}"
+
+    use_ai = mode == "AI (Groq)"
+    if use_ai:
+        if not gcfg["api_key"]:
+            st.warning("No Groq API key in secrets (groq.api_key) - using the template writer.")
+            use_ai = False
+        elif st.button("Compose with AI", type="primary", key="ai_compose"):
+            with st.spinner(f"Writing with {gcfg['model']} ..."):
+                subject, body, method = compose_email(lead, cls, signer, use_ai=True, ai_kwargs=gcfg)
+            if method == "ai":
+                st.session_state[draft_key] = {"subject": subject, "body": body}
+                st.success("Draft composed with AI - edit before sending.")
+            else:
+                st.warning("AI call failed - showing the template draft instead.")
+
+    if draft_key in st.session_state:
+        subject = st.session_state[draft_key]["subject"]
+        body = st.session_state[draft_key]["body"]
+    else:
+        subject, body, _ = compose_email(lead, cls, signer, use_ai=False)
+
+    subject = st.text_input("Subject", subject, key=f"subj_{lead['id']}")
+    body_box = st.text_area("Email body", body, height=260, key=f"body_{lead['id']}")
+
+    col_a, col_b, col_c = st.columns([1, 1, 3])
     with col_a:
-        if st.button("Log as sent", type="primary"):
+        if st.button("Log email", key=f"log_{lead['id']}"):
             add_email(lead["id"], subject, body_box, "out")
             st.success("Logged to history.")
             st.rerun()
     with col_b:
-        st.caption("Edit before sending - personalisation placeholders are already resolved.")
+        if st.button("Send email", type="primary", key=f"send_{lead['id']}"):
+            smtp = smtp_config()
+            ok, msg = send_email(smtp, lead["email"], subject, body_box)
+            if ok:
+                add_email(lead["id"], subject, body_box, "out")
+                st.success(f"Sent to {lead['email']}.")
+                st.rerun()
+            else:
+                st.error(msg)
+    with col_c:
+        st.caption("Log saves to history. Send delivers via SMTP and logs the sent copy.")
 
     st.subheader("Email history")
     for em in reversed(lead.get("email_history") or []):
@@ -281,6 +321,7 @@ PAGES = {
 def main() -> None:
     st.sidebar.title("CircuCity Intel")
     st.sidebar.caption("Growth Intelligence System")
+    render_config_sidebar()
     page_name = st.sidebar.radio("Navigate", list(PAGES.keys()), label_visibility="collapsed")
     PAGES[page_name]()
 

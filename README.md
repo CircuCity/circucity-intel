@@ -11,7 +11,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Then open http://localhost:8501.
+Then open http://localhost:8501. (`streamlit_app.py` is the default cloud entrypoint; the cloud Main file setting should point to it or `app.py`.)
 
 ## Pages
 

@@ -3,7 +3,6 @@ __pycache__/
 st_out.log
 st_err.log
 ghlogin*.log
-data/leads.json
 .venv/
 env/
 .streamlit/

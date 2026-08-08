@@ -164,6 +164,15 @@ def page_leads() -> None:
         st.info("No leads yet.")
         return
 
+    export_cols = ["contact", "organisation", "country", "website", "email",
+                   "role", "industry", "business_model", "lead_class",
+                   "outreach_status", "source", "evidence", "notes"]
+    export_df = pd.DataFrame([{c: l.get(c, "") for c in export_cols} for l in leads])
+    export_csv = export_df.to_csv(index=False).encode("utf-8-sig")
+    st.download_button("Export all leads (CSV)", export_csv,
+                       file_name="leads.csv", mime="text/csv",
+                       help="Download the full lead list - useful for backups or merging across apps.")
+
     opts = {f"{l['contact'] or l['organisation'] or l['id']}  ({l['lead_class'] or 'unclassified'})": l["id"]
             for l in leads}
     label = st.selectbox("Select lead", list(opts.keys()))

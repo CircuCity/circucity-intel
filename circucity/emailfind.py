@@ -20,7 +20,27 @@ import re
 import smtplib
 from urllib.parse import urlparse
 
+from circucity.webfind import fetch_text
+
+def valid_syntax(email: str) -> bool:
+    return isinstance(email, str) and bool(EMAIL_RE.fullmatch(email.strip()))
+
+
 EMAIL_RE = re.compile(r"\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,24}\b")
+
+OBS_RE = re.compile(
+    r"\b[a-zA-Z0-9._%+\-]+(?:\s*[\[(]?(?:at|\b@\b)[\])]?\s+)[a-zA-Z0-9.\-]+"
+    r"(?:\s*[\[(]?(?:dot)[\])]?\s+)[a-zA-Z]{2,6}\b")
+
+
+def _deobfuscate(text: str) -> str:
+    """Recover 'name [at] domain [dot] tld' style hidden emails."""
+    def fix(m: re.Match) -> str:
+        s = m.group(0)
+        s = re.sub(r"\s*[\[(]?(?:at|@)[\])]?\s*", "@", s)
+        s = re.sub(r"\s*[\[(]?dot[\])]?\s*", ".", s)
+        return s
+    return OBS_RE.sub(fix, text)
 
 BLOCKED_LOCALS = {"example", "yourname", "your.name", "email", "name", "user",
                   "someone", "test", "webmaster", "admin.login", "root"}
@@ -53,6 +73,7 @@ def extract_emails(text: str, max_hits: int = 6) -> list[str]:
     """Syntactically valid emails appearing in page text (best effort)."""
     if not text:
         return []
+    text = _deobfuscate(text)
     found, seen = [], set()
     for raw in EMAIL_RE.findall(text):
         email = raw.strip(" .,;:()<>\"'")
@@ -202,6 +223,33 @@ def assess(direct_emails: list[str], domain: str, probe: bool = True) -> dict:
 
 
 def discover(text: str, url: str, probe_smtp: bool = True) -> dict:
-    """One-call entry: extract from page text, fall back to candidates."""
+    """One-call entry: extract from page text, fall back to candidates.
+
+    When the page itself has no email, also tries the site's contact /
+    imprint / about pages (German stores must publish an Impressum, which
+    almost always carries the business email).
+    """
+    page_emails = extract_emails(text)
+    extra = ""
+    if url and not page_emails:
+        for candidate in contact_urls(url):
+            extra = fetch_text(candidate)
+            if extract_emails(extra):
+                break
     domain = domain_from_url(url)
-    return assess(extract_emails(text), domain, probe=probe_smtp)
+    combined = "\n".join(x for x in (text, extra) if x)
+    return assess(extract_emails(combined), domain, probe=probe_smtp)
+
+
+def contact_urls(url: str) -> list[str]:
+    """Likely contact/imprint pages for a site."""
+    try:
+        parsed = urlparse(url)
+        base = f"{parsed.scheme or 'https'}://{parsed.netloc}"
+    except Exception:
+        return []
+    if not parsed.netloc:
+        return []
+    paths = ["/contact", "/contact-us", "/kontakt", "/impressum",
+             "/imprint", "/about", "/kontaktieren", "/contact/"]
+    return [base + p for p in paths]

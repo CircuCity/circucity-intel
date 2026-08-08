@@ -360,24 +360,43 @@ def page_find() -> None:
             st.warning(results[0]["snippet"] or "Search returned nothing.")
             return
         df = pd.DataFrame(results).assign(add=False)
+        email_info = st.session_state.get("find_emails", {})
+        df["email"] = [email_info.get(r["url"], (None, ""))[0] or "" for r in results]
+        df["email_state"] = [email_info.get(r["url"], (None, ""))[1] or "" for r in results]
         edited = st.data_editor(
             df,
             column_config={
                 "add": st.column_config.CheckboxColumn("Import"),
                 "title": st.column_config.TextColumn("Title", width="large"),
                 "url": st.column_config.TextColumn("URL"),
+                "email": st.column_config.TextColumn("Email found"),
+                "email_state": st.column_config.TextColumn("Verified"),
                 "snippet": st.column_config.TextColumn("Snippet", width="large"),
             },
             hide_index=True, width="stretch", key="find_editor",
-            disabled=["title", "url", "snippet"],
+            disabled=["title", "url", "snippet", "email", "email_state"],
         )
         selected = edited[edited["add"]]
         if len(selected):
             st.markdown(f"**{len(selected)} selected**")
             ai_on = bool(groq_config()["api_key"])
-            c_find, c_probe, c_go = st.columns([1, 2, 3])
+            c_find, c_probe, c_scan, c_go = st.columns([1, 2, 2, 3])
             find_email = c_find.checkbox("Find business email", value=True)
             probe_smtp = c_probe.checkbox("Verify deliverability (SMTP)", value=False)
+            remaining = [r for r in results
+                         if r["url"] not in email_info and r["url"] in set(selected["url"])]
+            if c_scan.button(f"Scan {len(remaining)} for emails", disabled=not remaining):
+                info = st.session_state.setdefault("find_emails", {})
+                prog = st.progress(0.0)
+                for i, row in enumerate(remaining):
+                    try:
+                        text = fetch_text(row["url"])
+                    except Exception:
+                        text = ""
+                    found_info = discover(text, row["url"], probe_smtp=probe_smtp)
+                    info[row["url"]] = (found_info.get("email", ""), found_info.get("status", ""))
+                    prog.progress((i + 1) / max(len(remaining), 1))
+                st.rerun()
             if c_go.button(
                     f"Fetch, classify & import {len(selected)} (+AI analysis)" if ai_on
                     else f"Fetch, classify & import {len(selected)}", type="primary"):
@@ -396,7 +415,12 @@ def page_find() -> None:
                         "notes": str(row["title"])[:200],
                     })
                     if find_email:
-                        found_info = discover(text, row["url"], probe_smtp=probe_smtp)
+                        cached = email_info.get(row["url"])
+                        if cached and cached[0]:
+                            found_info = {"email": cached[0], "status": cached[1],
+                                          "candidates": []}
+                        else:
+                            found_info = discover(text, row["url"], probe_smtp=probe_smtp)
                         if found_info.get("email"):
                             lead["email"] = found_info["email"]
                             lead["custom"]["email_candidates"] = found_info.get("candidates", [])

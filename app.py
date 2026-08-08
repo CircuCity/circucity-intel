@@ -228,7 +228,28 @@ def page_leads() -> None:
                    + (" - verified on the lead's own site" if email_status == "found_website"
                       else " - mailbox accepted RCPT" if email_status == "smtp_ok"
                       else " - domain has MX" if email_status == "mx_ok"
+                      else " - best guess, not verified" if email_status == "unverified"
                       else ""))
+    if lead.get("website") and st.button("Find / re-scan email", key=f"rescan_{lead['id']}"):
+        with st.spinner("Scanning the site and its contact pages ..."):
+            try:
+                text = fetch_text(lead["website"])
+            except Exception:
+                text = ""
+            found_info = discover(text, lead["website"], probe_smtp=False)
+        if found_info.get("email"):
+            update_lead(lead["id"], {
+                "email": found_info["email"],
+                "custom": {
+                    **lead.get("custom", {}),
+                    "email_candidates": found_info.get("candidates", []),
+                    "email_status": found_info["status"],
+                },
+            })
+            st.success(f"Email updated to {found_info['email']} ({found_info['status']}).")
+            st.rerun()
+        else:
+            st.warning("No email found on the site or its contact pages - consider a role mailbox or the site's contact form.")
     c_mode, c_signer = st.columns([1, 3])
     with c_mode:
         mode = st.radio("Writer", ["Template", "AI (Groq)"], horizontal=True, key="writer_mode")
@@ -260,6 +281,8 @@ def page_leads() -> None:
     subject = st.text_input("Subject", subject, key=f"subj_{lead['id']}")
     body_box = st.text_area("Email body", body, height=260, key=f"body_{lead['id']}")
 
+    if lead["email"] and lead.get("custom", {}).get("email_status") in ("unverified", "rejected", "none"):
+        st.warning("This address is a role-mailbox guess or was rejected - it may bounce. Send anyway, or run 'Find / re-scan email' first.")
     col_a, col_b, col_c = st.columns([1, 1, 3])
     with col_a:
         if st.button("Log email", key=f"log_{lead['id']}"):

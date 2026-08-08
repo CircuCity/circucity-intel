@@ -100,19 +100,27 @@ def generate_candidates(domain: str) -> list[str]:
     return [f"{local}@{domain}" for local in ROLE_LOCALS]
 
 
+PUBLIC_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
+
+
 def mx_host(domain: str) -> str | None:
-    try:
-        import dns.resolver
-        resolver = dns.resolver.Resolver()
-        resolver.timeout = 4
-        resolver.lifetime = 6
-        records = resolver.resolve(domain, "MX", raise_on_no_answer=False)
-        if not records:
-            return None
-        exchange = sorted(records, key=lambda r: r.preference)[0].exchange
-        return str(exchange).rstrip(".")
-    except Exception:
-        return None
+    import dns.resolver
+    for nameservers in (None, PUBLIC_NAMESERVERS):
+        try:
+            resolver = dns.resolver.Resolver(
+                configure=nameservers is None)
+            resolver.timeout = 3
+            resolver.lifetime = 5.5
+            if nameservers:
+                resolver.nameservers = nameservers
+            records = resolver.resolve(domain, "MX", raise_on_no_answer=False)
+            if not records:
+                return None
+            exchange = sorted(records, key=lambda r: r.preference)[0].exchange
+            return str(exchange).rstrip(".")
+        except Exception:
+            continue
+    return None
 
 
 def probe_rcpt(email: str, timeout: int = 8) -> str | None:
